@@ -9,10 +9,12 @@
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "lint": "pnpm --filter web lint",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:migrate": "pnpm --filter web db:migrate",
+    "db:studio": "pnpm --filter web db:studio"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
+    "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.6",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
