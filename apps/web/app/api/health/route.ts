@@ -18,6 +18,13 @@ export async function GET() {
 
   try {
     await prisma.$queryRaw`SELECT 1`;
+    const domain = await prisma.domain.findFirst({
+      select: { id: true },
+    });
+    if (!domain) {
+      status.ok = false;
+      status.db = 'error';
+    }
   } catch {
     status.ok = false;
     status.db = 'error';

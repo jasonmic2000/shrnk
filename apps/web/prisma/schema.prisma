@@ -11,3 +11,33 @@ model User {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 }
+
+model Domain {
+  id        String   @id @default(cuid())
+  hostname  String   @unique
+  createdAt DateTime @default(now())
+  links     Link[]
+}
+
+model Link {
+  id             String         @id @default(cuid())
+  domainId       String
+  slug           String
+  destinationUrl String
+  redirectType   Int
+  immutable      Boolean        @default(false)
+  expiresAt      DateTime?
+  disabled       Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  domain         Domain         @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  analytics      LinkAnalytics?
+
+  @@unique([domainId, slug])
+}
+
+model LinkAnalytics {
+  linkId        String   @id
+  totalClicks   BigInt   @default(0)
+  lastClickedAt DateTime?
+  link          Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+}
