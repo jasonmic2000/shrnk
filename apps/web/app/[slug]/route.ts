@@ -2,42 +2,16 @@ import { NextResponse } from 'next/server';
 
 import { prisma } from '../../lib/prisma';
 import { ensureRedisConnection } from '../../lib/redis';
+import { getCachedLink, setCachedLink, setMissing } from '../../lib/link-cache';
 
-const CACHE_TTL_SECONDS = 60 * 60 * 24;
-const MISSING_TTL_SECONDS = 60;
 const ANALYTICS_TTL_SECONDS = 60 * 60 * 24 * 90;
 const ALLOWED_REDIRECT_STATUSES = new Set([301, 302, 307, 308]);
-const MISSING_SENTINEL = '__missing__';
 
 function safeRedirectStatus(value: unknown): 301 | 302 | 307 | 308 {
   if (typeof value === 'number' && ALLOWED_REDIRECT_STATUSES.has(value)) {
     return value as 301 | 302 | 307 | 308;
   }
   return 302;
-}
-
-type CachedLink = {
-  linkId: string;
-  destinationUrl: string;
-  redirectType: number;
-  disabled: boolean;
-  expiresAt: string | null;
-};
-
-function parseCachedLink(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  if (value === MISSING_SENTINEL) {
-    return MISSING_SENTINEL;
-  }
-
-  try {
-    return JSON.parse(value) as CachedLink;
-  } catch {
-    return null;
-  }
 }
 
 let cachedDomainId: string | null = null;
@@ -78,23 +52,23 @@ export async function GET(
   }
 
   const slug = params.slug;
-  let cached: CachedLink | typeof MISSING_SENTINEL | null = null;
+  let cachedLink = null;
 
   try {
     const redis = await ensureRedisConnection();
-    cached = parseCachedLink(await redis.get(`link:${domainId}:${slug}`));
+    cachedLink = await getCachedLink(redis, domainId, slug);
   } catch {
-    cached = null;
+    cachedLink = null;
   }
 
-  if (cached === MISSING_SENTINEL) {
+  if (cachedLink?.kind === 'missing') {
     return NextResponse.json(
       { errorCode: 'not_found', message: 'Link not found.' },
       { status: 404 },
     );
   }
 
-  let linkData = cached;
+  let linkData = cachedLink?.kind === 'hit' ? cachedLink.value : null;
 
   if (!linkData) {
     const link = await prisma.link.findFirst({
@@ -111,9 +85,7 @@ export async function GET(
     if (!link) {
       try {
         const redis = await ensureRedisConnection();
-        await redis.set(`link:${domainId}:${slug}`, MISSING_SENTINEL, {
-          EX: MISSING_TTL_SECONDS,
-        });
+        await setMissing(redis, domainId, slug);
       } catch {
         // Cache failures should not block redirects.
       }
@@ -134,9 +106,7 @@ export async function GET(
 
     try {
       const redis = await ensureRedisConnection();
-      await redis.set(`link:${domainId}:${slug}`, JSON.stringify(linkData), {
-        EX: CACHE_TTL_SECONDS,
-      });
+      await setCachedLink(redis, domainId, slug, linkData);
     } catch {
       // Cache failures should not block redirects.
     }

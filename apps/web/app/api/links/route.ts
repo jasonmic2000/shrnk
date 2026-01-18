@@ -8,10 +8,10 @@ import {
   normalizeAndValidateCustomSlug,
 } from '../../../lib/slug';
 import { normalizeAndValidateUrl } from '../../../lib/url';
+import { setCachedLink } from '../../../lib/link-cache';
 
 const REDIRECT_TYPES = new Set([301, 302, 307, 308]);
 const MAX_SLUG_ATTEMPTS = 10;
-const CACHE_TTL_SECONDS = 60 * 60 * 24;
 
 const CreateLinkSchema = z.object({
   destinationUrl: z.string(),
@@ -202,9 +202,7 @@ export async function POST(request: Request) {
 
   try {
     const redis = await ensureRedisConnection();
-    await redis.set(`link:${domain.id}:${link.slug}`, JSON.stringify(cachePayload), {
-      EX: CACHE_TTL_SECONDS,
-    });
+    await setCachedLink(redis, domain.id, link.slug, cachePayload);
   } catch {
     // Cache failures should not block link creation.
   }
