@@ -224,6 +224,77 @@ export async function POST(request: Request) {
   );
 }
 
+export async function GET(request: Request) {
+  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || 'localhost';
+  const domain = await prisma.domain.findFirst({
+    where: { hostname },
+    select: { id: true },
+  });
+
+  if (!domain) {
+    return NextResponse.json(
+      {
+        errorCode: 'domain_missing',
+        message: 'Default domain not found. Run pnpm --filter web db:seed.',
+      },
+      { status: 500 },
+    );
+  }
+
+  const url = new URL(request.url);
+  const limitParam = url.searchParams.get('limit');
+  const cursor = url.searchParams.get('cursor');
+
+  let limit = 20;
+  if (limitParam) {
+    const parsedLimit = Number(limitParam);
+    if (!Number.isNaN(parsedLimit) && parsedLimit > 0) {
+      limit = Math.min(parsedLimit, 100);
+    }
+  }
+
+  const links = await prisma.link.findMany({
+    where: { domainId: domain.id },
+    orderBy: { createdAt: 'desc' },
+    take: limit + 1,
+    ...(cursor
+      ? {
+          cursor: { id: cursor },
+          skip: 1,
+        }
+      : {}),
+    include: { analytics: true },
+  });
+
+  type LinkWithAnalytics = Awaited<
+    ReturnType<typeof prisma.link.findMany>
+  >[number];
+  const typedLinks = links as LinkWithAnalytics[];
+  const hasNextPage = typedLinks.length > limit;
+  const items = typedLinks.slice(0, limit).map((link) => ({
+    id: link.id,
+    slug: link.slug,
+    destinationUrl: link.destinationUrl,
+    redirectType: link.redirectType,
+    immutable: link.immutable,
+    expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
+    disabled: link.disabled,
+    createdAt: link.createdAt.toISOString(),
+    analytics: link.analytics
+      ? {
+          totalClicks: Number(link.analytics.totalClicks),
+          lastClickedAt: link.analytics.lastClickedAt
+            ? link.analytics.lastClickedAt.toISOString()
+            : null,
+        }
+      : null,
+  }));
+
+  const nextCursor = hasNextPage ? (items[items.length - 1]?.id ?? null) : null;
+
+  return NextResponse.json({ items, nextCursor });
+}
+
 function isUniqueConstraintError(error: unknown) {
   if (!error || typeof error !== 'object') {
     return false;
