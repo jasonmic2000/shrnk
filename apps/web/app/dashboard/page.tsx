@@ -9,7 +9,6 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 
 type LinkItem = {
   id: string;
@@ -57,6 +56,13 @@ function getStatus(link: LinkItem) {
     }
   }
   return { label: "Active", tone: "text-primary" };
+}
+
+function getStatusChipClasses(status: ReturnType<typeof getStatus>) {
+  if (status.label === "Active") {
+    return "border-primary/30 bg-primary/10 text-primary";
+  }
+  return "border-destructive/30 bg-destructive/10 text-destructive";
 }
 
 export default function DashboardPage() {
@@ -260,30 +266,21 @@ export default function DashboardPage() {
               </div>
             ) : links.length === 0 ? (
               <div className="border-border text-muted-foreground min-h-[240px] rounded-xl border border-dashed p-6 text-sm">
-                No links yet. Create your first one on the left.
+                No links yet. Create your first one to see it listed here.
               </div>
             ) : (
-              <Table className="table-fixed">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[22%]">Short link</TableHead>
-                    <TableHead className="w-[26%]">Destination</TableHead>
-                    <TableHead className="w-[12%]">Status</TableHead>
-                    <TableHead className="w-[8%]">Redirect</TableHead>
-                    <TableHead className="w-[8%]">Clicks</TableHead>
-                    <TableHead className="w-[12%]">Last clicked</TableHead>
-                    <TableHead className="w-[12%]">Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {links.map((link) => {
-                    const status = getStatus(link);
-                    const shortUrl = origin ? `${origin}/${link.slug}` : `/${link.slug}`;
-                    return (
-                      <TableRow key={link.id}>
-                        <TableCell>
+              <div className="space-y-3">
+                {links.map((link) => {
+                  const status = getStatus(link);
+                  const shortUrl = origin ? `${origin}/${link.slug}` : `/${link.slug}`;
+                  const clicks = link.analytics ? link.analytics.totalClicks : 0;
+                  const lastClickedAt = link.analytics ? formatDate(link.analytics.lastClickedAt) : "--";
+                  return (
+                    <Card key={link.id} className="border-border/80 bg-background/70 rounded-2xl border">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className="truncate font-mono text-xs" title={shortUrl}>
+                            <span className="truncate font-mono text-sm" title={shortUrl}>
                               {shortUrl}
                             </span>
                             <Button
@@ -296,24 +293,30 @@ export default function DashboardPage() {
                               <Copy />
                             </Button>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground truncate text-xs" title={link.destinationUrl}>
+                          <div className="text-muted-foreground flex flex-wrap gap-2 text-[11px] uppercase tracking-wide">
+                            <span
+                              className={`rounded-full border px-2 py-1 text-[11px] font-medium ${getStatusChipClasses(
+                                status,
+                              )}`}
+                            >
+                              {status.label}
+                            </span>
+                            <span className="border-border rounded-full border px-2 py-1">{link.redirectType}</span>
+                            <span className="border-border rounded-full border px-2 py-1">Clicks {clicks}</span>
+                            <span className="border-border rounded-full border px-2 py-1">Last {lastClickedAt}</span>
+                            <span className="border-border rounded-full border px-2 py-1">
+                              Created {formatDate(link.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground truncate text-xs" title={link.destinationUrl}>
                           {link.destinationUrl}
-                        </TableCell>
-                        <TableCell className={`text-xs font-medium ${status.tone}`}>{status.label}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{link.redirectType}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {link.analytics ? link.analytics.totalClicks : 0}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {link.analytics ? formatDate(link.analytics.lastClickedAt) : "--"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatDate(link.createdAt)}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>

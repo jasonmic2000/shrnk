@@ -248,6 +248,34 @@ export async function GET(request: Request) {
     include: { analytics: true },
   });
 
+  const liveAnalyticsById = new Map<string, { totalClicks: number; lastClickedAt: string | null }>();
+  if (links.length > 0) {
+    try {
+      const redis = await ensureRedisConnection();
+      const clickKeys = links.map((link) => `clicks:${link.id}`);
+      const lastClickedKeys = links.map((link) => `lastClickedAt:${link.id}`);
+      const [clickValues, lastClickedValues] = await Promise.all([redis.mGet(clickKeys), redis.mGet(lastClickedKeys)]);
+
+      links.forEach((link, index) => {
+        const clickValue = clickValues[index];
+        const lastClickedValue = lastClickedValues[index];
+        const parsedClicks = clickValue ? Number.parseInt(clickValue, 10) : null;
+        const totalClicks = Number.isFinite(parsedClicks) ? parsedClicks : null;
+        const lastClickedAt =
+          lastClickedValue && !Number.isNaN(new Date(lastClickedValue).getTime()) ? lastClickedValue : null;
+
+        if (totalClicks !== null || lastClickedAt !== null) {
+          liveAnalyticsById.set(link.id, {
+            totalClicks: totalClicks ?? 0,
+            lastClickedAt,
+          });
+        }
+      });
+    } catch {
+      // Redis failures should not block list responses.
+    }
+  }
+
   type LinkWithAnalytics = Awaited<ReturnType<typeof prisma.link.findMany>>[number];
   const typedLinks = links as LinkWithAnalytics[];
   const hasNextPage = typedLinks.length > limit;
@@ -260,12 +288,22 @@ export async function GET(request: Request) {
     expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
     disabled: link.disabled,
     createdAt: link.createdAt.toISOString(),
-    analytics: link.analytics
-      ? {
-          totalClicks: Number(link.analytics.totalClicks),
-          lastClickedAt: link.analytics.lastClickedAt ? link.analytics.lastClickedAt.toISOString() : null,
-        }
-      : null,
+    analytics: (() => {
+      const liveAnalytics = liveAnalyticsById.get(link.id);
+      if (liveAnalytics) {
+        return {
+          totalClicks: liveAnalytics.totalClicks,
+          lastClickedAt: liveAnalytics.lastClickedAt,
+        };
+      }
+      if (!link.analytics) {
+        return null;
+      }
+      return {
+        totalClicks: Number(link.analytics.totalClicks),
+        lastClickedAt: link.analytics.lastClickedAt ? link.analytics.lastClickedAt.toISOString() : null,
+      };
+    })(),
   }));
 
   const nextCursor = hasNextPage ? (items[items.length - 1]?.id ?? null) : null;

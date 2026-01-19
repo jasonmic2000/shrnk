@@ -16,6 +16,7 @@ const prismaMock = vi.hoisted(() => ({
 
 const redisMock = vi.hoisted(() => ({
   set: vi.fn().mockResolvedValue("OK"),
+  mGet: vi.fn(),
 }));
 
 vi.mock("../../../lib/prisma", () => ({
@@ -149,6 +150,7 @@ describe("GET /api/links", () => {
     vi.clearAllMocks();
     process.env.DEFAULT_DOMAIN_HOSTNAME = "example.com";
     prismaMock.domain.findFirst.mockResolvedValue({ id: "domain_1" });
+    redisMock.mGet.mockImplementation(async (keys: string[]) => keys.map(() => null));
   });
 
   it("returns newest-first ordering", async () => {
@@ -267,6 +269,62 @@ describe("GET /api/links", () => {
     expect(payload.items[0].analytics).toEqual({
       totalClicks: 9,
       lastClickedAt: "2024-04-02T00:00:00.000Z",
+    });
+  });
+
+  it("prefers live analytics from redis when available", async () => {
+    prismaMock.link.findMany.mockResolvedValue([
+      {
+        id: "link_redis",
+        slug: "redis",
+        destinationUrl: "https://example.com/redis",
+        redirectType: 302,
+        immutable: false,
+        expiresAt: null,
+        disabled: false,
+        createdAt: new Date("2024-05-01T00:00:00Z"),
+        analytics: {
+          totalClicks: 4n,
+          lastClickedAt: new Date("2024-05-01T00:00:00Z"),
+        },
+      },
+    ]);
+
+    redisMock.mGet.mockResolvedValueOnce(["12"]).mockResolvedValueOnce(["2024-05-02T00:00:00.000Z"]);
+
+    const response = await GET(new Request("http://localhost/api/links?limit=1"));
+    const payload = await response.json();
+    expect(payload.items[0].analytics).toEqual({
+      totalClicks: 12,
+      lastClickedAt: "2024-05-02T00:00:00.000Z",
+    });
+  });
+
+  it("falls back to db analytics when redis fails", async () => {
+    prismaMock.link.findMany.mockResolvedValue([
+      {
+        id: "link_db",
+        slug: "db",
+        destinationUrl: "https://example.com/db",
+        redirectType: 302,
+        immutable: false,
+        expiresAt: null,
+        disabled: false,
+        createdAt: new Date("2024-06-01T00:00:00Z"),
+        analytics: {
+          totalClicks: 7n,
+          lastClickedAt: new Date("2024-06-02T00:00:00Z"),
+        },
+      },
+    ]);
+
+    redisMock.mGet.mockRejectedValueOnce(new Error("redis down"));
+
+    const response = await GET(new Request("http://localhost/api/links?limit=1"));
+    const payload = await response.json();
+    expect(payload.items[0].analytics).toEqual({
+      totalClicks: 7,
+      lastClickedAt: "2024-06-02T00:00:00.000Z",
     });
   });
 });
