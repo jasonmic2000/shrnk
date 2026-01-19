@@ -1,6 +1,4 @@
-type UrlValidationResult =
-  | { ok: true; url: string }
-  | { ok: false; errorCode: string; message: string };
+type UrlValidationResult = { ok: true; url: string } | { ok: false; errorCode: string; message: string };
 
 const MAX_URL_LENGTH = 2048;
 
@@ -14,8 +12,8 @@ export function normalizeAndValidateUrl(input: string): UrlValidationResult {
   if (!trimmed) {
     return {
       ok: false,
-      errorCode: 'EMPTY',
-      message: 'URL cannot be empty.',
+      errorCode: "EMPTY",
+      message: "URL cannot be empty.",
     };
   }
 
@@ -25,27 +23,27 @@ export function normalizeAndValidateUrl(input: string): UrlValidationResult {
   } catch {
     return {
       ok: false,
-      errorCode: 'INVALID_URL',
-      message: 'URL is invalid.',
+      errorCode: "INVALID_URL",
+      message: "URL is invalid.",
     };
   }
 
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
     return {
       ok: false,
-      errorCode: 'INVALID_SCHEME',
-      message: 'Only http and https URLs are allowed.',
+      errorCode: "INVALID_SCHEME",
+      message: "Only http and https URLs are allowed.",
     };
   }
 
   url.hostname = url.hostname.toLowerCase();
 
-  if (url.protocol === 'http:' && url.port === '80') {
-    url.port = '';
+  if (url.protocol === "http:" && url.port === "80") {
+    url.port = "";
   }
 
-  if (url.protocol === 'https:' && url.port === '443') {
-    url.port = '';
+  if (url.protocol === "https:" && url.port === "443") {
+    url.port = "";
   }
 
   const normalized = url.toString();
@@ -53,8 +51,8 @@ export function normalizeAndValidateUrl(input: string): UrlValidationResult {
   if (normalized.length > MAX_URL_LENGTH) {
     return {
       ok: false,
-      errorCode: 'TOO_LONG',
-      message: 'URL is too long.',
+      errorCode: "TOO_LONG",
+      message: "URL is too long.",
     };
   }
 

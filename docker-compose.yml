@@ -6,13 +6,13 @@ services:
       POSTGRES_PASSWORD: shrnk
       POSTGRES_DB: shrnk
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
   redis:
     image: redis:7-alpine
     ports:
-      - '6379:6379'
+      - "6379:6379"
 
 volumes:
   postgres_data:

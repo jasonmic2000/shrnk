@@ -1,5 +1,5 @@
 export const LINK_CACHE_TTL_SECONDS = 60 * 60 * 24;
-export const LINK_MISSING_SENTINEL = '__missing__';
+export const LINK_MISSING_SENTINEL = "__missing__";
 export const LINK_MISSING_TTL_SECONDS = 60;
 
 export type CachedLink = {
@@ -18,25 +18,21 @@ export async function getCachedLink(
   redis: { get: (key: string) => Promise<string | null> },
   domainId: string,
   slug: string,
-): Promise<
-  | { kind: 'hit'; value: CachedLink }
-  | { kind: 'missing' }
-  | { kind: 'miss' }
-> {
+): Promise<{ kind: "hit"; value: CachedLink } | { kind: "missing" } | { kind: "miss" }> {
   const value = await redis.get(buildLinkCacheKey(domainId, slug));
 
   if (value === null) {
-    return { kind: 'miss' };
+    return { kind: "miss" };
   }
 
   if (value === LINK_MISSING_SENTINEL) {
-    return { kind: 'missing' };
+    return { kind: "missing" };
   }
 
   try {
-    return { kind: 'hit', value: JSON.parse(value) as CachedLink };
+    return { kind: "hit", value: JSON.parse(value) as CachedLink };
   } catch {
-    return { kind: 'miss' };
+    return { kind: "miss" };
   }
 }
 

@@ -1,19 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import { prisma } from '../../../lib/prisma';
-import { ensureRedisConnection } from '../../../lib/redis';
+import { prisma } from "../../../lib/prisma";
+import { ensureRedisConnection } from "../../../lib/redis";
 
 type HealthStatus = {
   ok: boolean;
-  db: 'ok' | 'error';
-  redis: 'ok' | 'error';
+  db: "ok" | "error";
+  redis: "ok" | "error";
 };
 
 export async function GET() {
   const status: HealthStatus = {
     ok: true,
-    db: 'ok',
-    redis: 'ok',
+    db: "ok",
+    redis: "ok",
   };
 
   try {
@@ -23,22 +23,22 @@ export async function GET() {
     });
     if (!domain) {
       status.ok = false;
-      status.db = 'error';
+      status.db = "error";
     }
   } catch {
     status.ok = false;
-    status.db = 'error';
+    status.db = "error";
   }
 
   try {
     const client = await ensureRedisConnection();
     const pong = await client.ping();
-    if (pong !== 'PONG') {
-      throw new Error('Unexpected Redis response');
+    if (pong !== "PONG") {
+      throw new Error("Unexpected Redis response");
     }
   } catch {
     status.ok = false;
-    status.redis = 'error';
+    status.redis = "error";
   }
 
   return NextResponse.json(status, { status: status.ok ? 200 : 503 });

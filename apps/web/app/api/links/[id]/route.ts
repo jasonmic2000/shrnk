@@ -1,13 +1,10 @@
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
-import { prisma } from '../../../../lib/prisma';
-import { ensureRedisConnection } from '../../../../lib/redis';
-import { normalizeAndValidateUrl } from '../../../../lib/url';
-import {
-  invalidateCachedLink,
-  setCachedLink,
-} from '../../../../lib/link-cache';
+import { prisma } from "../../../../lib/prisma";
+import { ensureRedisConnection } from "../../../../lib/redis";
+import { normalizeAndValidateUrl } from "../../../../lib/url";
+import { invalidateCachedLink, setCachedLink } from "../../../../lib/link-cache";
 
 const REDIRECT_TYPES = new Set([301, 302, 307, 308]);
 
@@ -27,8 +24,8 @@ function parseRedirectType(value: number | undefined) {
   if (!REDIRECT_TYPES.has(value)) {
     return {
       ok: false as const,
-      errorCode: 'invalid_redirect_type',
-      message: 'Redirect type must be 301, 302, 307, or 308.',
+      errorCode: "invalid_redirect_type",
+      message: "Redirect type must be 301, 302, 307, or 308.",
     };
   }
 
@@ -48,41 +45,32 @@ function parseExpiresAt(value: string | null | undefined) {
   if (Number.isNaN(parsed.getTime())) {
     return {
       ok: false as const,
-      errorCode: 'invalid_expires_at',
-      message: 'expiresAt must be a valid ISO datetime.',
+      errorCode: "invalid_expires_at",
+      message: "expiresAt must be a valid ISO datetime.",
     };
   }
 
   return { ok: true as const, value: parsed };
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { errorCode: 'invalid_json', message: 'Invalid JSON body.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ errorCode: "invalid_json", message: "Invalid JSON body." }, { status: 400 });
   }
 
   const parsedBody = UpdateLinkSchema.safeParse(body);
   if (!parsedBody.success) {
-    return NextResponse.json(
-      { errorCode: 'invalid_body', message: 'Invalid request body.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ errorCode: "invalid_body", message: "Invalid request body." }, { status: 400 });
   }
 
   if (parsedBody.data.slug !== undefined) {
     return NextResponse.json(
       {
-        errorCode: 'slug_change_not_allowed',
-        message: 'Slug cannot be updated.',
+        errorCode: "slug_change_not_allowed",
+        message: "Slug cannot be updated.",
       },
       { status: 400 },
     );
@@ -114,15 +102,12 @@ export async function PATCH(
   if (parsedBody.data.destinationUrl !== undefined) {
     const urlResult = normalizeAndValidateUrl(parsedBody.data.destinationUrl);
     if (!urlResult.ok) {
-      return NextResponse.json(
-        { errorCode: urlResult.errorCode, message: urlResult.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ errorCode: urlResult.errorCode, message: urlResult.message }, { status: 400 });
     }
     destinationUrl = urlResult.url;
   }
 
-  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || 'localhost';
+  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || "localhost";
   const domain = await prisma.domain.findFirst({
     where: { hostname },
     select: { id: true },
@@ -131,8 +116,8 @@ export async function PATCH(
   if (!domain) {
     return NextResponse.json(
       {
-        errorCode: 'domain_missing',
-        message: 'Default domain not found. Run pnpm --filter web db:seed.',
+        errorCode: "domain_missing",
+        message: "Default domain not found. Run pnpm --filter web db:seed.",
       },
       { status: 500 },
     );
@@ -143,21 +128,15 @@ export async function PATCH(
   });
 
   if (!link) {
-    return NextResponse.json(
-      { errorCode: 'not_found', message: 'Link not found.' },
-      { status: 404 },
-    );
+    return NextResponse.json({ errorCode: "not_found", message: "Link not found." }, { status: 404 });
   }
 
   if (link.immutable) {
-    if (
-      parsedBody.data.destinationUrl !== undefined ||
-      parsedBody.data.redirectType !== undefined
-    ) {
+    if (parsedBody.data.destinationUrl !== undefined || parsedBody.data.redirectType !== undefined) {
       return NextResponse.json(
         {
-          errorCode: 'immutable_link',
-          message: 'Immutable links cannot update destination or redirect type.',
+          errorCode: "immutable_link",
+          message: "Immutable links cannot update destination or redirect type.",
         },
         { status: 409 },
       );
@@ -171,19 +150,15 @@ export async function PATCH(
   if (redirectTypeResult.value !== undefined) {
     if (redirectType === 301 || redirectType === 308) {
       immutable = true;
-      warnings.push('Immutable redirect enforced for 301/308.');
+      warnings.push("Immutable redirect enforced for 301/308.");
     }
   }
 
   const updateData = {
     ...(destinationUrl !== undefined ? { destinationUrl } : {}),
     ...(redirectTypeResult.value !== undefined ? { redirectType } : {}),
-    ...(parsedBody.data.disabled !== undefined
-      ? { disabled: parsedBody.data.disabled }
-      : {}),
-    ...(expiresAtResult.value !== undefined
-      ? { expiresAt: expiresAtResult.value }
-      : {}),
+    ...(parsedBody.data.disabled !== undefined ? { disabled: parsedBody.data.disabled } : {}),
+    ...(expiresAtResult.value !== undefined ? { expiresAt: expiresAtResult.value } : {}),
     ...(immutable !== link.immutable ? { immutable } : {}),
   };
 
@@ -218,9 +193,7 @@ export async function PATCH(
     destinationUrl: updatedLink.destinationUrl,
     redirectType: updatedLink.redirectType,
     immutable: updatedLink.immutable,
-    expiresAt: updatedLink.expiresAt
-      ? updatedLink.expiresAt.toISOString()
-      : null,
+    expiresAt: updatedLink.expiresAt ? updatedLink.expiresAt.toISOString() : null,
     disabled: updatedLink.disabled,
     createdAt: updatedLink.createdAt.toISOString(),
     ...(warnings.length ? { warnings } : {}),

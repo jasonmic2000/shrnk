@@ -1,14 +1,11 @@
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
-import { prisma } from '../../../lib/prisma';
-import { ensureRedisConnection } from '../../../lib/redis';
-import {
-  generateSlugBase58,
-  normalizeAndValidateCustomSlug,
-} from '../../../lib/slug';
-import { normalizeAndValidateUrl } from '../../../lib/url';
-import { setCachedLink } from '../../../lib/link-cache';
+import { prisma } from "../../../lib/prisma";
+import { ensureRedisConnection } from "../../../lib/redis";
+import { generateSlugBase58, normalizeAndValidateCustomSlug } from "../../../lib/slug";
+import { normalizeAndValidateUrl } from "../../../lib/url";
+import { setCachedLink } from "../../../lib/link-cache";
 
 const REDIRECT_TYPES = new Set([301, 302, 307, 308]);
 const MAX_SLUG_ATTEMPTS = 10;
@@ -28,8 +25,8 @@ function parseRedirectType(value: number | undefined) {
   if (!REDIRECT_TYPES.has(value)) {
     return {
       ok: false as const,
-      errorCode: 'invalid_redirect_type',
-      message: 'Redirect type must be 301, 302, 307, or 308.',
+      errorCode: "invalid_redirect_type",
+      message: "Redirect type must be 301, 302, 307, or 308.",
     };
   }
 
@@ -45,8 +42,8 @@ function parseExpiresAt(value: string | undefined) {
   if (Number.isNaN(parsed.getTime())) {
     return {
       ok: false as const,
-      errorCode: 'invalid_expires_at',
-      message: 'expiresAt must be a valid ISO datetime.',
+      errorCode: "invalid_expires_at",
+      message: "expiresAt must be a valid ISO datetime.",
     };
   }
 
@@ -58,26 +55,17 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { errorCode: 'invalid_json', message: 'Invalid JSON body.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ errorCode: "invalid_json", message: "Invalid JSON body." }, { status: 400 });
   }
 
   const parsedBody = CreateLinkSchema.safeParse(body);
   if (!parsedBody.success) {
-    return NextResponse.json(
-      { errorCode: 'invalid_body', message: 'Invalid request body.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ errorCode: "invalid_body", message: "Invalid request body." }, { status: 400 });
   }
 
   const urlResult = normalizeAndValidateUrl(parsedBody.data.destinationUrl);
   if (!urlResult.ok) {
-    return NextResponse.json(
-      { errorCode: urlResult.errorCode, message: urlResult.message },
-      { status: 400 },
-    );
+    return NextResponse.json({ errorCode: urlResult.errorCode, message: urlResult.message }, { status: 400 });
   }
 
   const redirectTypeResult = parseRedirectType(parsedBody.data.redirectType);
@@ -102,7 +90,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || 'localhost';
+  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || "localhost";
   const domain = await prisma.domain.findFirst({
     where: { hostname },
     select: { id: true },
@@ -111,8 +99,8 @@ export async function POST(request: Request) {
   if (!domain) {
     return NextResponse.json(
       {
-        errorCode: 'domain_missing',
-        message: 'Default domain not found. Run pnpm --filter web db:seed.',
+        errorCode: "domain_missing",
+        message: "Default domain not found. Run pnpm --filter web db:seed.",
       },
       { status: 500 },
     );
@@ -122,7 +110,7 @@ export async function POST(request: Request) {
   const redirectType = redirectTypeResult.value;
   const immutable = redirectType === 301 || redirectType === 308;
   if (immutable) {
-    warnings.push('Immutable redirect enforced for 301/308.');
+    warnings.push("Immutable redirect enforced for 301/308.");
   }
 
   let slug: string | null = null;
@@ -130,10 +118,7 @@ export async function POST(request: Request) {
   if (parsedBody.data.slug) {
     const slugResult = normalizeAndValidateCustomSlug(parsedBody.data.slug);
     if (!slugResult.ok) {
-      return NextResponse.json(
-        { errorCode: slugResult.errorCode, message: slugResult.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ errorCode: slugResult.errorCode, message: slugResult.message }, { status: 400 });
     }
 
     slug = slugResult.slug;
@@ -143,10 +128,7 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
-      return NextResponse.json(
-        { errorCode: 'slug_taken', message: 'Slug is already in use.' },
-        { status: 409 },
-      );
+      return NextResponse.json({ errorCode: "slug_taken", message: "Slug is already in use." }, { status: 409 });
     }
   }
 
@@ -178,8 +160,8 @@ export async function POST(request: Request) {
   if (!link) {
     return NextResponse.json(
       {
-        errorCode: 'slug_generation_failed',
-        message: 'Unable to generate a unique slug.',
+        errorCode: "slug_generation_failed",
+        message: "Unable to generate a unique slug.",
       },
       { status: 500 },
     );
@@ -225,7 +207,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || 'localhost';
+  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || "localhost";
   const domain = await prisma.domain.findFirst({
     where: { hostname },
     select: { id: true },
@@ -234,16 +216,16 @@ export async function GET(request: Request) {
   if (!domain) {
     return NextResponse.json(
       {
-        errorCode: 'domain_missing',
-        message: 'Default domain not found. Run pnpm --filter web db:seed.',
+        errorCode: "domain_missing",
+        message: "Default domain not found. Run pnpm --filter web db:seed.",
       },
       { status: 500 },
     );
   }
 
   const url = new URL(request.url);
-  const limitParam = url.searchParams.get('limit');
-  const cursor = url.searchParams.get('cursor');
+  const limitParam = url.searchParams.get("limit");
+  const cursor = url.searchParams.get("cursor");
 
   let limit = 20;
   if (limitParam) {
@@ -255,7 +237,7 @@ export async function GET(request: Request) {
 
   const links = await prisma.link.findMany({
     where: { domainId: domain.id },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: limit + 1,
     ...(cursor
       ? {
@@ -266,9 +248,7 @@ export async function GET(request: Request) {
     include: { analytics: true },
   });
 
-  type LinkWithAnalytics = Awaited<
-    ReturnType<typeof prisma.link.findMany>
-  >[number];
+  type LinkWithAnalytics = Awaited<ReturnType<typeof prisma.link.findMany>>[number];
   const typedLinks = links as LinkWithAnalytics[];
   const hasNextPage = typedLinks.length > limit;
   const items = typedLinks.slice(0, limit).map((link) => ({
@@ -283,9 +263,7 @@ export async function GET(request: Request) {
     analytics: link.analytics
       ? {
           totalClicks: Number(link.analytics.totalClicks),
-          lastClickedAt: link.analytics.lastClickedAt
-            ? link.analytics.lastClickedAt.toISOString()
-            : null,
+          lastClickedAt: link.analytics.lastClickedAt ? link.analytics.lastClickedAt.toISOString() : null,
         }
       : null,
   }));
@@ -296,8 +274,8 @@ export async function GET(request: Request) {
 }
 
 function isUniqueConstraintError(error: unknown) {
-  if (!error || typeof error !== 'object') {
+  if (!error || typeof error !== "object") {
     return false;
   }
-  return 'code' in error && error.code === 'P2002';
+  return "code" in error && error.code === "P2002";
 }

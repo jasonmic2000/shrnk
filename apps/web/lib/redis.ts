@@ -1,11 +1,11 @@
-import { createClient, type RedisClientType } from 'redis';
+import { createClient, type RedisClientType } from "redis";
 
 const globalForRedis = globalThis as unknown as { redis?: RedisClientType };
 
 function createRedisClient() {
   const url = process.env.REDIS_URL;
   if (!url) {
-    throw new Error('REDIS_URL is not set');
+    throw new Error("REDIS_URL is not set");
   }
 
   return createClient({ url });
@@ -13,7 +13,7 @@ function createRedisClient() {
 
 export const redis = globalForRedis.redis ?? createRedisClient();
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   globalForRedis.redis = redis;
 }
 
