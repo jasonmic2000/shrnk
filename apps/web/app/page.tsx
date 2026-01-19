@@ -31,6 +31,11 @@ export default function HomePage() {
           <p className="text-muted-foreground max-w-xl text-lg">
             Developer-first short links. Privacy-first analytics.
           </p>
+          <ul className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
+            <li className="border-border rounded-lg border px-3 py-2">Predictable redirects</li>
+            <li className="border-border rounded-lg border px-3 py-2">Cache-first performance</li>
+            <li className="border-border rounded-lg border px-3 py-2">No tracking baggage</li>
+          </ul>
         </div>
         <form
           onSubmit={handleSubmit}
@@ -64,7 +69,7 @@ export default function HomePage() {
               Cache friendly
             </span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 pr-28 md:pr-32">
             <p className="text-muted-foreground text-sm uppercase tracking-[0.2em]">Sample payload</p>
             <pre className="border-border bg-background/60 text-foreground rounded-2xl border p-4 text-sm shadow-inner">
               <code>
@@ -77,7 +82,7 @@ export default function HomePage() {
             </pre>
           </div>
         </div>
-        <div className="border-foreground/15 bg-background text-foreground absolute -right-8 bottom-6 flex h-24 w-24 flex-col justify-between rounded-2xl border-2 p-3 text-[11px] shadow-[6px_6px_0_hsl(var(--border))]">
+        <div className="border-foreground/15 bg-background text-foreground absolute right-6 top-6 flex h-24 w-24 flex-col justify-between rounded-2xl border-2 p-3 text-[11px] shadow-[6px_6px_0_hsl(var(--border))]">
           <p className="text-muted-foreground uppercase tracking-wide">Latency</p>
           <p className="text-2xl font-semibold">12ms</p>
           <p className="text-muted-foreground">cache hit</p>

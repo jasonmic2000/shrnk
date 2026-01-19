@@ -157,6 +157,8 @@ export default function DashboardPage() {
   }
 
   const immutableWarning = redirectType === "301" || redirectType === "308" ? "This makes the link immutable." : null;
+  const totalLinks = links.length;
+  const totalClicks = links.reduce((sum, link) => sum + (link.analytics?.totalClicks ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-5xl space-y-10 pb-8">
@@ -237,26 +239,40 @@ export default function DashboardPage() {
             <CardDescription>Recent links from your default domain.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="border-foreground/15 bg-background flex items-center justify-between rounded-xl border-2 px-4 py-3 text-sm shadow-[4px_4px_0_hsl(var(--border))]">
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">Total links</p>
+                  <p className="text-foreground text-lg font-semibold">{isLoading ? "--" : totalLinks}</p>
+                </div>
+              </div>
+              <div className="border-foreground/15 bg-background flex items-center justify-between rounded-xl border-2 px-4 py-3 text-sm shadow-[4px_4px_0_hsl(var(--border))]">
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">Total clicks</p>
+                  <p className="text-foreground text-lg font-semibold">{isLoading ? "--" : totalClicks}</p>
+                </div>
+              </div>
+            </div>
             {listError ? <p className="text-destructive text-sm">{listError}</p> : null}
             {isLoading ? (
-              <div className="border-border bg-muted/40 text-muted-foreground rounded-xl border p-4 text-sm">
+              <div className="border-border bg-muted/40 text-muted-foreground min-h-[240px] rounded-xl border p-4 text-sm">
                 Loading links...
               </div>
             ) : links.length === 0 ? (
-              <div className="border-border text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
+              <div className="border-border text-muted-foreground min-h-[240px] rounded-xl border border-dashed p-6 text-sm">
                 No links yet. Create your first one on the left.
               </div>
             ) : (
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[170px]">Short link</TableHead>
-                    <TableHead>Destination</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Redirect</TableHead>
-                    <TableHead>Clicks</TableHead>
-                    <TableHead>Last clicked</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead className="w-[22%]">Short link</TableHead>
+                    <TableHead className="w-[26%]">Destination</TableHead>
+                    <TableHead className="w-[12%]">Status</TableHead>
+                    <TableHead className="w-[8%]">Redirect</TableHead>
+                    <TableHead className="w-[8%]">Clicks</TableHead>
+                    <TableHead className="w-[12%]">Last clicked</TableHead>
+                    <TableHead className="w-[12%]">Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -266,8 +282,10 @@ export default function DashboardPage() {
                     return (
                       <TableRow key={link.id}>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs">{shortUrl}</span>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate font-mono text-xs" title={shortUrl}>
+                              {shortUrl}
+                            </span>
                             <Button
                               type="button"
                               size="icon"
@@ -279,7 +297,7 @@ export default function DashboardPage() {
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground max-w-[220px] truncate text-xs">
+                        <TableCell className="text-muted-foreground truncate text-xs" title={link.destinationUrl}>
                           {link.destinationUrl}
                         </TableCell>
                         <TableCell className={`text-xs font-medium ${status.tone}`}>{status.label}</TableCell>
