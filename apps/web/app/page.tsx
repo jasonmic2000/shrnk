@@ -24,7 +24,7 @@ export default function HomePage() {
     <div className="space-y-20 pb-24 pt-6">
       <section className="grid items-start gap-10 md:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
-          <div className="border-border bg-card text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
+          <div className="border-border bg-card text-muted-foreground inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs font-medium shadow-[2px_2px_0_hsl(var(--border))]">
             Privacy-first analytics. No tracking baggage.
           </div>
           <div className="space-y-3">
@@ -59,10 +59,10 @@ export default function HomePage() {
         <div className="border-border bg-card relative rounded-3xl border p-8 shadow-sm">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <span className="bg-primary/15 text-primary cursor-default select-none rounded-full px-3 py-1 text-xs font-semibold">
+              <span className="bg-primary/15 text-primary cursor-default select-none rounded-full px-3 py-1 text-xs font-semibold shadow-[2px_2px_0_hsl(var(--border))]">
                 API-first
               </span>
-              <span className="border-border text-muted-foreground cursor-default select-none rounded-full border px-3 py-1 text-xs">
+              <span className="border-border text-muted-foreground cursor-default select-none rounded-full border px-3 py-1 text-xs shadow-[2px_2px_0_hsl(var(--border))]">
                 Cache friendly
               </span>
             </div>
