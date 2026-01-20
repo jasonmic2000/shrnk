@@ -2,6 +2,22 @@ type UrlValidationResult = { ok: true; url: string } | { ok: false; errorCode: s
 
 const MAX_URL_LENGTH = 2048;
 
+function isValidHostname(hostname: string) {
+  if (hostname === "localhost") {
+    return true;
+  }
+
+  if (hostname.includes(":")) {
+    return true;
+  }
+
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+    return true;
+  }
+
+  return hostname.includes(".");
+}
+
 function hasScheme(input: string) {
   return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(input);
 }
@@ -37,6 +53,13 @@ export function normalizeAndValidateUrl(input: string): UrlValidationResult {
   }
 
   url.hostname = url.hostname.toLowerCase();
+  if (!isValidHostname(url.hostname)) {
+    return {
+      ok: false,
+      errorCode: "INVALID_URL_HOST",
+      message: "Please enter a valid URL (e.g., example.com).",
+    };
+  }
 
   if (url.protocol === "http:" && url.port === "80") {
     url.port = "";

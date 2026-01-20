@@ -11,6 +11,24 @@ describe("normalizeAndValidateUrl", () => {
     }
   });
 
+  it("rejects single-label hosts", () => {
+    const result = normalizeAndValidateUrl("test");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errorCode).toBe("INVALID_URL_HOST");
+    }
+  });
+
+  it("allows localhost", () => {
+    const result = normalizeAndValidateUrl("localhost");
+    expect(result.ok).toBe(true);
+  });
+
+  it("allows IPv4 addresses", () => {
+    const result = normalizeAndValidateUrl("127.0.0.1");
+    expect(result.ok).toBe(true);
+  });
+
   it("trims whitespace", () => {
     const result = normalizeAndValidateUrl("  https://example.com  ");
     expect(result.ok).toBe(true);
@@ -46,6 +64,19 @@ describe("normalizeAndValidateUrl", () => {
     if (!result.ok) {
       expect(result.errorCode).toBe("INVALID_SCHEME");
     }
+  });
+
+  it("rejects http single-label hosts", () => {
+    const result = normalizeAndValidateUrl("http://test");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errorCode).toBe("INVALID_URL_HOST");
+    }
+  });
+
+  it("accepts subdomains", () => {
+    const result = normalizeAndValidateUrl("https://sub.domain.com");
+    expect(result.ok).toBe(true);
   });
 
   it("rejects invalid URLs", () => {

@@ -66,6 +66,45 @@ function getStatusChipClasses(status: ReturnType<typeof getStatus>) {
   return "border-destructive/30 bg-destructive/10 text-destructive";
 }
 
+function isValidHostname(hostname: string) {
+  if (hostname === "localhost") {
+    return true;
+  }
+
+  if (hostname.includes(":")) {
+    return true;
+  }
+
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+    return true;
+  }
+
+  return hostname.includes(".");
+}
+
+function validateDestinationUrl(input: string) {
+  if (!input) {
+    return "Destination URL is required.";
+  }
+
+  let url: URL;
+  try {
+    url = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(input) ? new URL(input) : new URL(`https://${input}`);
+  } catch {
+    return "Please enter a valid URL (e.g., example.com).";
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return "Only http and https URLs are allowed.";
+  }
+
+  if (!isValidHostname(url.hostname.toLowerCase())) {
+    return "Please enter a valid URL (e.g., example.com).";
+  }
+
+  return null;
+}
+
 export default function DashboardPage() {
   const searchParams = useSearchParams();
   const [origin, setOrigin] = React.useState("");
@@ -75,6 +114,7 @@ export default function DashboardPage() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<{ destinationUrl?: string; customSlug?: string }>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [destinationUrl, setDestinationUrl] = React.useState("");
   const [customSlug, setCustomSlug] = React.useState("");
   const [redirectType, setRedirectType] = React.useState("302");
@@ -132,7 +172,7 @@ export default function DashboardPage() {
     if (code === "slug_taken") {
       return { customSlug: "That slug is already taken. Try another." };
     }
-    if (["EMPTY", "INVALID_URL", "INVALID_SCHEME", "TOO_LONG"].includes(code)) {
+    if (["EMPTY", "INVALID_URL", "INVALID_SCHEME", "TOO_LONG", "INVALID_URL_HOST"].includes(code)) {
       if (message.includes("slug")) {
         return { customSlug: error.message ?? "Slug format is invalid." };
       }
@@ -149,8 +189,9 @@ export default function DashboardPage() {
     setFormError(null);
     setFieldErrors({});
     const trimmedUrl = destinationUrl.trim();
-    if (!trimmedUrl) {
-      setFieldErrors({ destinationUrl: "Destination URL is required." });
+    const destinationError = validateDestinationUrl(trimmedUrl);
+    if (destinationError) {
+      setFieldErrors({ destinationUrl: destinationError });
       return;
     }
 
@@ -212,6 +253,30 @@ export default function DashboardPage() {
       toast.success("Copied to clipboard.");
     } catch {
       toast.error("Unable to copy to clipboard.");
+    }
+  }
+
+  async function handleDelete(link: LinkItem) {
+    if (!window.confirm(`Delete ${link.slug}? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(link.id);
+    try {
+      const response = await fetch(`/api/links/${link.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error("Unable to delete link.");
+      }
+      setLinks((prev) => prev.filter((item) => item.id !== link.id));
+      if (highlightedLinkId === link.id) {
+        setHighlightedLinkId(null);
+      }
+      toast.success("Link deleted");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete link.";
+      toast.error(message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -394,6 +459,16 @@ export default function DashboardPage() {
                             <span className="border-border rounded-full border px-2 py-1">
                               Created {formatDate(link.createdAt)}
                             </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="border-destructive/40 text-destructive hover:border-destructive/60 hover:text-destructive"
+                              disabled={deletingId === link.id}
+                              onClick={() => handleDelete(link)}
+                            >
+                              {deletingId === link.id ? "Deleting..." : "Delete"}
+                            </Button>
                           </div>
                         </div>
                         <p className="text-muted-foreground truncate text-xs" title={link.destinationUrl}>

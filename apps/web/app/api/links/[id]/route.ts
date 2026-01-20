@@ -199,3 +199,46 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     ...(warnings.length ? { warnings } : {}),
   });
 }
+
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  const linkId = params.id;
+  if (!linkId) {
+    return NextResponse.json({ errorCode: "invalid_id", message: "Invalid link id." }, { status: 400 });
+  }
+
+  const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || "localhost";
+  const domain = await prisma.domain.findFirst({
+    where: { hostname },
+    select: { id: true },
+  });
+
+  if (!domain) {
+    return NextResponse.json(
+      {
+        errorCode: "domain_missing",
+        message: "Default domain not found. Run pnpm --filter web db:seed.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const link = await prisma.link.findFirst({
+    where: { id: linkId, domainId: domain.id },
+    select: { id: true, slug: true },
+  });
+
+  if (!link) {
+    return NextResponse.json({ errorCode: "not_found", message: "Link not found." }, { status: 404 });
+  }
+
+  await prisma.link.delete({ where: { id: link.id } });
+
+  try {
+    const redis = await ensureRedisConnection();
+    await invalidateCachedLink(redis, domain.id, link.slug);
+  } catch {
+    // Cache failures should not block deletes.
+  }
+
+  return new NextResponse(null, { status: 204 });
+}

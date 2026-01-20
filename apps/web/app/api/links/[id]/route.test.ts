@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PATCH } from "./route";
+import { DELETE, PATCH } from "./route";
 
 const prismaMock = vi.hoisted(() => ({
   domain: {
@@ -8,6 +8,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   link: {
     findFirst: vi.fn(),
+    delete: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -132,5 +133,41 @@ describe("PATCH /api/links/:id", () => {
     const payload = await response.json();
     expect(payload.immutable).toBe(true);
     expect(payload.warnings).toEqual(expect.arrayContaining(["Immutable redirect enforced for 301/308."]));
+  });
+});
+
+describe("DELETE /api/links/:id", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.DEFAULT_DOMAIN_HOSTNAME = "example.com";
+    prismaMock.domain.findFirst.mockResolvedValue({ id: "domain_1" });
+  });
+
+  it("deletes a link and clears cache", async () => {
+    prismaMock.link.findFirst.mockResolvedValue({
+      id: "link_delete",
+      slug: "delete-me",
+      domainId: "domain_1",
+    });
+    prismaMock.link.delete.mockResolvedValue({ id: "link_delete" });
+
+    const response = await DELETE(new Request("http://localhost/api/links/link_delete"), {
+      params: { id: "link_delete" },
+    });
+
+    expect(response.status).toBe(204);
+    expect(redisMock.del).toHaveBeenCalledWith("link:domain_1:delete-me");
+  });
+
+  it("returns 404 when link is missing", async () => {
+    prismaMock.link.findFirst.mockResolvedValue(null);
+
+    const response = await DELETE(new Request("http://localhost/api/links/missing"), {
+      params: { id: "missing" },
+    });
+
+    expect(response.status).toBe(404);
+    const payload = await response.json();
+    expect(payload.errorCode).toBe("not_found");
   });
 });
