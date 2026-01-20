@@ -46,6 +46,37 @@ function formatDate(value: string | null) {
   }).format(date);
 }
 
+function formatShortDate(value: string | null) {
+  if (!value) {
+    return "--";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+  }).format(date);
+}
+
+function toLocalDateTimeInput(value: string | null) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const pad = (num: number) => String(num).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 function getStatus(link: LinkItem) {
   if (link.disabled) {
     return { label: "Disabled", tone: "text-destructive" };
@@ -115,6 +146,9 @@ export default function DashboardPage() {
   const [fieldErrors, setFieldErrors] = React.useState<{ destinationUrl?: string; customSlug?: string }>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null);
+  const [expiryModeById, setExpiryModeById] = React.useState<Record<string, "none" | "set">>({});
+  const [expiryValueById, setExpiryValueById] = React.useState<Record<string, string>>({});
   const [destinationUrl, setDestinationUrl] = React.useState("");
   const [customSlug, setCustomSlug] = React.useState("");
   const [redirectType, setRedirectType] = React.useState("302");
@@ -280,6 +314,53 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleToggleDisabled(link: LinkItem) {
+    setUpdatingId(link.id);
+    try {
+      const response = await fetch(`/api/links/${link.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disabled: !link.disabled }),
+      });
+      if (!response.ok) {
+        throw new Error("Unable to update link.");
+      }
+      const updated = (await response.json()) as LinkItem;
+      setLinks((prev) => prev.map((item) => (item.id === link.id ? { ...item, ...updated } : item)));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update link.";
+      toast.error(message);
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleUpdateExpiry(link: LinkItem, value: string | null) {
+    setUpdatingId(link.id);
+    try {
+      const response = await fetch(`/api/links/${link.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresAt: value }),
+      });
+      if (!response.ok) {
+        throw new Error("Unable to update expiry.");
+      }
+      const updated = (await response.json()) as LinkItem;
+      setLinks((prev) => prev.map((item) => (item.id === link.id ? { ...item, ...updated } : item)));
+      setExpiryModeById((prev) => ({ ...prev, [link.id]: updated.expiresAt ? "set" : "none" }));
+      setExpiryValueById((prev) => ({
+        ...prev,
+        [link.id]: updated.expiresAt ? toLocalDateTimeInput(updated.expiresAt) : "",
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update expiry.";
+      toast.error(message);
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   const immutableWarning = redirectType === "301" || redirectType === "308" ? "This makes the link immutable." : null;
   const totalLinks = links.length;
   const totalClicks = links.reduce((sum, link) => sum + (link.analytics?.totalClicks ?? 0), 0);
@@ -422,6 +503,16 @@ export default function DashboardPage() {
                   const clicks = link.analytics ? link.analytics.totalClicks : 0;
                   const lastClickedAt = link.analytics ? formatDate(link.analytics.lastClickedAt) : "--";
                   const isHighlighted = highlightedLinkId === link.id;
+                  const isUpdating = updatingId === link.id;
+                  const expiresAtLabel =
+                    link.expiresAt && new Date(link.expiresAt).getTime() <= Date.now()
+                      ? "Expired"
+                      : link.expiresAt
+                        ? `Expires ${formatShortDate(link.expiresAt)}`
+                        : null;
+                  const expiryMode = expiryModeById[link.id] ?? (link.expiresAt ? "set" : "none");
+                  const expiryValue =
+                    expiryValueById[link.id] ?? (link.expiresAt ? toLocalDateTimeInput(link.expiresAt) : "");
                   return (
                     <Card
                       className={`border-border/80 bg-background/70 hover:border-foreground/25 relative rounded-2xl border transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md ${
@@ -456,6 +547,9 @@ export default function DashboardPage() {
                             <span className="border-border rounded-full border px-2 py-1">{link.redirectType}</span>
                             <span className="border-border rounded-full border px-2 py-1">Clicks {clicks}</span>
                             <span className="border-border rounded-full border px-2 py-1">Last {lastClickedAt}</span>
+                            {expiresAtLabel ? (
+                              <span className="border-border rounded-full border px-2 py-1">{expiresAtLabel}</span>
+                            ) : null}
                             <span className="border-border rounded-full border px-2 py-1">
                               Created {formatDate(link.createdAt)}
                             </span>
@@ -464,20 +558,188 @@ export default function DashboardPage() {
                         <p className="text-muted-foreground truncate text-xs" title={link.destinationUrl}>
                           {link.destinationUrl}
                         </p>
-                        <button
-                          type="button"
-                          className="text-muted-foreground/70 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background absolute bottom-4 right-4 inline-flex items-center justify-center transition-[color,transform] duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                          aria-label="Delete link"
-                          title="Delete link"
-                          disabled={deletingId === link.id}
-                          onClick={() => handleDelete(link)}
-                        >
-                          {deletingId === link.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </button>
+                        {/* <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
+                          <span>Expires</span>
+                          <Select
+                            value={expiryMode}
+                            onValueChange={(value) =>
+                              setExpiryModeById((prev) => ({
+                                ...prev,
+                                [link.id]: value as "none" | "set",
+                              }))
+                            }
+                            disabled={isUpdating}
+                          >
+                            <SelectTrigger className="h-8 w-[140px]">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="set">Set datetime</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {expiryMode === "set" ? (
+                            <>
+                              <Input
+                                type="datetime-local"
+                                value={expiryValue}
+                                onChange={(event) =>
+                                  setExpiryValueById((prev) => ({
+                                    ...prev,
+                                    [link.id]: event.target.value,
+                                  }))
+                                }
+                                className="h-8 w-full min-w-[200px] max-w-[320px] pr-3"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isUpdating || !expiryValue}
+                                onClick={() =>
+                                  handleUpdateExpiry(link, expiryValue ? new Date(expiryValue).toISOString() : null)
+                                }
+                              >
+                                Save
+                              </Button>
+                            </>
+                          ) : link.expiresAt ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isUpdating}
+                              onClick={() => handleUpdateExpiry(link, null)}
+                            >
+                              Clear
+                            </Button>
+                          ) : null}
+                        </div>
+                        <div className="absolute bottom-3.5 right-4 flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[11px]"
+                            disabled={isUpdating}
+                            onClick={() => handleToggleDisabled(link)}
+                          >
+                            {link.disabled ? "Enable" : "Disable"}
+                          </Button>
+                          <button
+                            type="button"
+                            className="text-muted-foreground/70 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center justify-center transition-[color,transform] duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                            aria-label="Delete link"
+                            title="Delete link"
+                            disabled={deletingId === link.id}
+                            onClick={() => handleDelete(link)}
+                          >
+                            {deletingId === link.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div> */}
+                        <div className="text-muted-foreground mt-3 grid gap-3 text-xs">
+                          {/* Row 1: Expires controls */}
+                          <div className="grid items-center gap-3 sm:grid-cols-[auto_140px_minmax(240px,1fr)]">
+                            <span className="shrink-0">Expires</span>
+
+                            <Select
+                              value={expiryMode}
+                              onValueChange={(value) =>
+                                setExpiryModeById((prev) => ({
+                                  ...prev,
+                                  [link.id]: value as "none" | "set",
+                                }))
+                              }
+                              disabled={isUpdating}
+                            >
+                              <SelectTrigger className="h-8 w-[140px]">
+                                <SelectValue placeholder="None" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="set">Set datetime</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {expiryMode === "set" ? (
+                              <Input
+                                type="datetime-local"
+                                value={expiryValue}
+                                onChange={(event) =>
+                                  setExpiryValueById((prev) => ({
+                                    ...prev,
+                                    [link.id]: event.target.value,
+                                  }))
+                                }
+                                // key bits:
+                                // - pr-10 gives the native icon breathing room
+                                // - min-w avoids squeezing (which is what makes it look clipped)
+                                className="h-8 w-full min-w-[240px]"
+                              />
+                            ) : null}
+                          </div>
+
+                          {/* Row 2: Actions */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              {expiryMode === "set" ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isUpdating || !expiryValue}
+                                  onClick={() =>
+                                    handleUpdateExpiry(link, expiryValue ? new Date(expiryValue).toISOString() : null)
+                                  }
+                                >
+                                  Save
+                                </Button>
+                              ) : link.expiresAt ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isUpdating}
+                                  onClick={() => handleUpdateExpiry(link, null)}
+                                >
+                                  Clear
+                                </Button>
+                              ) : null}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[11px]"
+                                disabled={isUpdating}
+                                onClick={() => handleToggleDisabled(link)}
+                              >
+                                {link.disabled ? "Enable" : "Disable"}
+                              </Button>
+
+                              <button
+                                type="button"
+                                className="text-muted-foreground/70 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center justify-center transition-[color,transform] duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
+                                aria-label="Delete link"
+                                title="Delete link"
+                                disabled={deletingId === link.id}
+                                onClick={() => handleDelete(link)}
+                              >
+                                {deletingId === link.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   );
