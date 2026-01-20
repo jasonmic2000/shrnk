@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import { ensureRedisConnection } from "../../lib/redis";
 import { getCachedLink, setCachedLink, setMissing } from "../../lib/link-cache";
+import { buildRateLimitKey, getRequestIp, rateLimit } from "../../lib/rate-limit";
 
 const ANALYTICS_TTL_SECONDS = 60 * 60 * 24 * 90;
 const ALLOWED_REDIRECT_STATUSES = new Set([301, 302, 307, 308]);
@@ -34,7 +35,21 @@ async function getDefaultDomainId(hostname: string) {
   return cachedDomainId;
 }
 
-export async function GET(_request: Request, { params }: { params: { slug: string } }) {
+export async function GET(request: Request, { params }: { params: { slug: string } }) {
+  try {
+    const redis = await ensureRedisConnection();
+    const key = buildRateLimitKey("redirect", getRequestIp(request));
+    const limitResult = await rateLimit(redis, key, 300, 60);
+    if (!limitResult.allowed) {
+      return NextResponse.json(
+        { errorCode: "rate_limited", message: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(limitResult.retryAfter) } },
+      );
+    }
+  } catch {
+    // Rate limiting should not block redirects.
+  }
+
   const hostname = process.env.DEFAULT_DOMAIN_HOSTNAME || "localhost";
   const domainId = await getDefaultDomainId(hostname);
 

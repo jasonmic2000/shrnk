@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "../../../lib/prisma";
 import { ensureRedisConnection } from "../../../lib/redis";
+import { buildRateLimitKey, getRequestIp, rateLimit } from "../../../lib/rate-limit";
 import { generateSlugBase58, normalizeAndValidateCustomSlug } from "../../../lib/slug";
 import { normalizeAndValidateUrl } from "../../../lib/url";
 import { setCachedLink } from "../../../lib/link-cache";
@@ -51,6 +52,20 @@ function parseExpiresAt(value: string | undefined) {
 }
 
 export async function POST(request: Request) {
+  try {
+    const redis = await ensureRedisConnection();
+    const key = buildRateLimitKey("api", getRequestIp(request));
+    const limitResult = await rateLimit(redis, key, 60, 60);
+    if (!limitResult.allowed) {
+      return NextResponse.json(
+        { errorCode: "rate_limited", message: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(limitResult.retryAfter) } },
+      );
+    }
+  } catch {
+    // Rate limiting should not block link creation.
+  }
+
   let body: unknown;
   try {
     body = await request.json();

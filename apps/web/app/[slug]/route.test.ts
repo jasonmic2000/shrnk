@@ -15,6 +15,8 @@ const redisMock = vi.hoisted(() => ({
   get: vi.fn(),
   set: vi.fn(),
   incr: vi.fn(),
+  expire: vi.fn().mockResolvedValue(1),
+  ttl: vi.fn().mockResolvedValue(60),
 }));
 
 vi.mock("../../lib/prisma", () => ({

@@ -5,6 +5,7 @@ import { prisma } from "../../../../lib/prisma";
 import { ensureRedisConnection } from "../../../../lib/redis";
 import { normalizeAndValidateUrl } from "../../../../lib/url";
 import { invalidateCachedLink, setCachedLink } from "../../../../lib/link-cache";
+import { buildRateLimitKey, getRequestIp, rateLimit } from "../../../../lib/rate-limit";
 
 const REDIRECT_TYPES = new Set([301, 302, 307, 308]);
 
@@ -54,6 +55,20 @@ function parseExpiresAt(value: string | null | undefined) {
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const redis = await ensureRedisConnection();
+    const key = buildRateLimitKey("api", getRequestIp(request));
+    const limitResult = await rateLimit(redis, key, 60, 60);
+    if (!limitResult.allowed) {
+      return NextResponse.json(
+        { errorCode: "rate_limited", message: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(limitResult.retryAfter) } },
+      );
+    }
+  } catch {
+    // Rate limiting should not block updates.
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -200,7 +215,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   });
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const redis = await ensureRedisConnection();
+    const key = buildRateLimitKey("api", getRequestIp(request));
+    const limitResult = await rateLimit(redis, key, 60, 60);
+    if (!limitResult.allowed) {
+      return NextResponse.json(
+        { errorCode: "rate_limited", message: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(limitResult.retryAfter) } },
+      );
+    }
+  } catch {
+    // Rate limiting should not block deletes.
+  }
+
   const linkId = params.id;
   if (!linkId) {
     return NextResponse.json({ errorCode: "invalid_id", message: "Invalid link id." }, { status: 400 });
