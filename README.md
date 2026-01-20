@@ -16,7 +16,7 @@ Shrnk is intentionally different.
 - No dark analytics patterns
 - No unnecessary tracking
 - Clear separation between core functionality and optional features
-- Designed to scale *conceptually* before scaling technically
+- Designed to scale _conceptually_ before scaling technically
 
 ---
 
@@ -57,34 +57,40 @@ Specific implementation details may change as the project evolves — the focus 
 
 ## Design decisions
 
-This section documents the *why* behind the system — the trade-offs, not just the implementation.
+This section documents the _why_ behind the system — the trade-offs, not just the implementation.
 
 ### 1) Privacy-first defaults
+
 **Decision:** Keep analytics optional and explicitly enabled, not on by default.  
 **Why:** URL shorteners are frequently used as tracking infrastructure. Shrnk is intentionally different: predictable behavior and user trust first.  
 **Trade-off:** Fewer “growth” features out of the box. More work to build analytics the right way.
 
 ### 2) Slug strategy: readable + collision-safe
+
 **Decision:** Use short, URL-safe slugs (Base62) with a collision strategy, and support custom slugs with validation.  
 **Why:** Short links must be compact and easy to share; custom slugs are a real user need.  
 **Trade-off:** Requires careful uniqueness constraints + good error messages.
 
-### 3) Separate *redirect path* from *management API*
+### 3) Separate _redirect path_ from _management API_
+
 **Decision:** Treat redirects as a performance-critical path with strict latency goals, separate from link creation/management APIs.  
 **Why:** Most traffic is redirects. Keeping this path lean makes scaling and caching much easier.  
 **Trade-off:** Slightly more moving pieces and operational overhead.
 
 ### 4) Data model optimized for the read path
+
 **Decision:** Model storage around fast lookups by `slug` and minimal redirect-time computation.  
 **Why:** Redirect is the hot path; everything else is secondary.  
 **Trade-off:** Some queries (reporting, backfills) become more complex.
 
 ### 5) Explicit boundaries for “optional modules”
+
 **Decision:** Treat analytics, QR codes, and link-in-bio pages as modules layered on top of a stable core.  
 **Why:** Keeps the core small and reliable while still allowing product expansion.  
 **Trade-off:** Requires discipline to prevent “core” from becoming a dumping ground.
 
 ### 6) Opinionated API behavior
+
 **Decision:** Prefer predictable, explicit API responses and error codes (e.g., slug taken, invalid URL, unsafe protocol).  
 **Why:** Dev-focused product → developer ergonomics matters.  
 **Trade-off:** More upfront work in validation and API design.

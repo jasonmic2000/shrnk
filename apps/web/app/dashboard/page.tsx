@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Link2, Sparkles } from "lucide-react";
+import { Copy, Link2, Loader2, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -26,6 +26,7 @@ type LinkItem = {
 };
 
 type ApiError = {
+  errorCode?: string;
   message?: string;
 };
 
@@ -72,10 +73,12 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [listError, setListError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<{ destinationUrl?: string; customSlug?: string }>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [destinationUrl, setDestinationUrl] = React.useState("");
   const [customSlug, setCustomSlug] = React.useState("");
   const [redirectType, setRedirectType] = React.useState("302");
+  const [highlightedLinkId, setHighlightedLinkId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -110,12 +113,44 @@ export default function DashboardPage() {
     void loadLinks();
   }, []);
 
+  React.useEffect(() => {
+    if (!highlightedLinkId) {
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => {
+      setHighlightedLinkId(null);
+    }, 1500);
+    return () => window.clearTimeout(timeout);
+  }, [highlightedLinkId]);
+
+  function mapApiError(error: ApiError) {
+    const code = error.errorCode;
+    if (!code) {
+      return {};
+    }
+    const message = error.message?.toLowerCase() ?? "";
+    if (code === "slug_taken") {
+      return { customSlug: "That slug is already taken. Try another." };
+    }
+    if (["EMPTY", "INVALID_URL", "INVALID_SCHEME", "TOO_LONG"].includes(code)) {
+      if (message.includes("slug")) {
+        return { customSlug: error.message ?? "Slug format is invalid." };
+      }
+      return { destinationUrl: error.message ?? "Enter a valid destination URL." };
+    }
+    if (["RESERVED", "INVALID_CHARS", "EDGE_DASH", "CONSECUTIVE_DASH", "TOO_LONG"].includes(code)) {
+      return { customSlug: error.message ?? "Slug format is invalid." };
+    }
+    return {};
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
+    setFieldErrors({});
     const trimmedUrl = destinationUrl.trim();
     if (!trimmedUrl) {
-      setFormError("Destination URL is required.");
+      setFieldErrors({ destinationUrl: "Destination URL is required." });
       return;
     }
 
@@ -137,13 +172,31 @@ export default function DashboardPage() {
 
       if (!response.ok) {
         const data = (await response.json()) as ApiError;
+        const mapped = mapApiError(data);
+        const { destinationUrl: destinationError, customSlug: slugError } = mapped;
+        if (destinationError || slugError) {
+          setFieldErrors({ destinationUrl: destinationError, customSlug: slugError });
+          return;
+        }
         setFormError(data.message ?? "Unable to create link.");
         return;
       }
 
+      const created = (await response.json()) as { id: string; shortUrl: string };
       setCustomSlug("");
       setDestinationUrl("");
       setRedirectType("302");
+      setHighlightedLinkId(created.id);
+
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(created.shortUrl);
+          toast.success("Copied short link");
+        } catch {
+          toast.error("Unable to copy short link.");
+        }
+      }
+
       await loadLinks();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create link.";
@@ -199,6 +252,9 @@ export default function DashboardPage() {
                   onChange={(event) => setDestinationUrl(event.target.value)}
                   placeholder="https://example.com/launch"
                 />
+                {fieldErrors.destinationUrl ? (
+                  <p className="text-destructive text-xs">{fieldErrors.destinationUrl}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="customSlug">
@@ -210,6 +266,7 @@ export default function DashboardPage() {
                   onChange={(event) => setCustomSlug(event.target.value)}
                   placeholder="team-launch"
                 />
+                {fieldErrors.customSlug ? <p className="text-destructive text-xs">{fieldErrors.customSlug}</p> : null}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="redirectType">
@@ -230,7 +287,14 @@ export default function DashboardPage() {
               </div>
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
               <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Creating..." : "Create link"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create link"
+                )}
               </Button>
             </form>
           </CardContent>
@@ -261,12 +325,29 @@ export default function DashboardPage() {
             </div>
             {listError ? <p className="text-destructive text-sm">{listError}</p> : null}
             {isLoading ? (
-              <div className="border-border bg-muted/40 text-muted-foreground min-h-[240px] rounded-xl border p-4 text-sm">
-                Loading links...
+              <div className="space-y-3">
+                {[0, 1, 2].map((index) => (
+                  <Card key={index} className="border-border/80 bg-background/70 rounded-2xl border">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="bg-muted h-4 w-3/4 animate-pulse rounded" />
+                        <div className="flex flex-wrap gap-2">
+                          <div className="bg-muted h-5 w-20 animate-pulse rounded-full" />
+                          <div className="bg-muted h-5 w-16 animate-pulse rounded-full" />
+                          <div className="bg-muted h-5 w-24 animate-pulse rounded-full" />
+                        </div>
+                      </div>
+                      <div className="bg-muted h-3 w-full animate-pulse rounded" />
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : links.length === 0 ? (
               <div className="border-border text-muted-foreground min-h-[240px] rounded-xl border border-dashed p-6 text-sm">
-                No links yet. Create your first one to see it listed here.
+                <p className="text-foreground text-sm font-medium">No links yet.</p>
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Add a custom slug or switch the redirect type to get started.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -275,9 +356,12 @@ export default function DashboardPage() {
                   const shortUrl = origin ? `${origin}/${link.slug}` : `/${link.slug}`;
                   const clicks = link.analytics ? link.analytics.totalClicks : 0;
                   const lastClickedAt = link.analytics ? formatDate(link.analytics.lastClickedAt) : "--";
+                  const isHighlighted = highlightedLinkId === link.id;
                   return (
                     <Card
-                      className="border-border/80 bg-background/70 hover:border-foreground/25 rounded-2xl border transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                      className={`border-border/80 bg-background/70 hover:border-foreground/25 rounded-2xl border transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md ${
+                        isHighlighted ? "ring-primary/30 ring-2" : ""
+                      }`}
                       key={link.id}
                     >
                       <CardContent className="space-y-3 p-4">
@@ -321,6 +405,11 @@ export default function DashboardPage() {
                 })}
               </div>
             )}
+            {!isLoading && links.length > 0 && totalClicks === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                Analytics are privacy-first — only aggregated clicks are stored.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       </div>
