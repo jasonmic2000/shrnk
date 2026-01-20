@@ -276,7 +276,10 @@ export default function DashboardPage() {
                   const clicks = link.analytics ? link.analytics.totalClicks : 0;
                   const lastClickedAt = link.analytics ? formatDate(link.analytics.lastClickedAt) : "--";
                   return (
-                    <Card key={link.id} className="border-border/80 bg-background/70 rounded-2xl border">
+                    <Card
+                      className="border-border/80 bg-background/70 hover:border-foreground/25 rounded-2xl border transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md"
+                      key={link.id}
+                    >
                       <CardContent className="space-y-3 p-4">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div className="flex min-w-0 items-center gap-2">

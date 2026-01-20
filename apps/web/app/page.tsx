@@ -35,7 +35,7 @@ export default function HomePage() {
           </div>
           <form
             onSubmit={handleSubmit}
-            className="border-border/80 bg-card hover:border-foreground/20 focus-within:border-primary/60 focus-within:ring-primary/20 flex flex-col gap-3 rounded-2xl border-2 p-4 shadow-sm transition focus-within:ring-2 hover:shadow-md md:flex-row md:items-center"
+            className="border-border/80 bg-card hover:border-foreground/30 hover:bg-accent/20 focus-within:border-primary/70 focus-within:ring-primary/30 flex flex-col gap-3 rounded-2xl border-2 p-4 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 focus-within:ring-2 hover:shadow-md md:flex-row md:items-center"
           >
             <Input
               value={url}
@@ -93,17 +93,17 @@ export default function HomePage() {
           <h2 className="mt-2 text-2xl font-semibold">Built for fast, predictable redirects.</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="border-border bg-card hover:border-foreground/20 rounded-2xl border p-5 shadow-sm transition hover:shadow-md">
+          <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/20 rounded-2xl border p-5 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
             <h3 className="text-base font-semibold">Developer-first APIs</h3>
             <p className="text-muted-foreground mt-2 text-sm">
               Clean inputs, clear errors, and a predictable contract.
             </p>
           </div>
-          <div className="border-border bg-card hover:border-foreground/20 rounded-2xl border p-5 shadow-sm transition hover:shadow-md">
+          <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/20 rounded-2xl border p-5 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
             <h3 className="text-base font-semibold">Redis-cached redirects</h3>
             <p className="text-muted-foreground mt-2 text-sm">Hot-path caching keeps redirect latency tight.</p>
           </div>
-          <div className="border-border bg-card hover:border-foreground/20 rounded-2xl border p-5 shadow-sm transition hover:shadow-md">
+          <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/20 rounded-2xl border p-5 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
             <h3 className="text-base font-semibold">Privacy-first analytics</h3>
             <p className="text-muted-foreground mt-2 text-sm">Aggregated counts only, no tracking baggage.</p>
           </div>
@@ -116,7 +116,7 @@ export default function HomePage() {
           <h2 className="mt-2 text-2xl font-semibold">Three steps, no fluff.</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="border-border bg-card hover:border-foreground/20 flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition hover:shadow-md">
+          <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/20 flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
             <span className="border-foreground/15 bg-background text-foreground flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold shadow-[3px_3px_0_hsl(var(--border))]">
               1
             </span>
@@ -125,7 +125,7 @@ export default function HomePage() {
               <p className="text-muted-foreground mt-1 text-sm">POST `/api/links` with your destination URL.</p>
             </div>
           </div>
-          <div className="border-border bg-card hover:border-foreground/20 flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition hover:shadow-md">
+          <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/20 flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
             <span className="border-foreground/15 bg-background text-foreground flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold shadow-[3px_3px_0_hsl(var(--border))]">
               2
             </span>
@@ -134,7 +134,7 @@ export default function HomePage() {
               <p className="text-muted-foreground mt-1 text-sm">Distribute clean, stable links in seconds.</p>
             </div>
           </div>
-          <div className="border-border bg-card hover:border-foreground/20 flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition hover:shadow-md">
+          <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/20 flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
             <span className="border-foreground/15 bg-background text-foreground flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold shadow-[3px_3px_0_hsl(var(--border))]">
               3
             </span>
@@ -151,7 +151,7 @@ export default function HomePage() {
           <p className="text-muted-foreground text-xs font-semibold uppercase tracking-[0.2em]">Built for developers</p>
           <h2 className="mt-2 text-2xl font-semibold">Simple, honest primitives.</h2>
         </div>
-        <div className="border-border bg-card hover:border-foreground/20 rounded-3xl border p-6 shadow-sm transition hover:shadow-md">
+        <div className="border-border bg-card hover:border-foreground/25 hover:bg-accent/10 rounded-3xl border p-6 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-muted-foreground text-xs uppercase tracking-[0.2em]">Sample payload</p>
           <pre className="border-border bg-background text-foreground mt-4 rounded-2xl border p-4 text-sm shadow-inner">
             <code>
@@ -166,7 +166,7 @@ export default function HomePage() {
       </section>
 
       <footer className="border-border text-muted-foreground flex flex-col items-start justify-between gap-3 border-t pt-6 text-sm sm:flex-row sm:items-center">
-        <span>Shrnk © 2024</span>
+        <span>Shrnk © 2026</span>
         <div className="flex flex-wrap gap-4">
           <Link href="/dashboard" className="hover:text-foreground">
             Dashboard
