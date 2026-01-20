@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  --background: 0 0% 100%;
+  --background: 210 20% 98%;
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
@@ -15,37 +15,37 @@
   --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
   --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 46%;
+  --muted-foreground: 215 18% 34%;
   --accent: 142 30% 92%;
   --accent-foreground: 222 47% 11%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
+  --border: 214 22% 80%;
+  --input: 214 22% 80%;
   --ring: 142 70% 38%;
   --radius: 0.85rem;
 }
 
 .dark {
   color-scheme: dark;
-  --background: 222 47% 5%;
+  --background: 222 47% 4%;
   --foreground: 210 40% 98%;
-  --card: 222 47% 8%;
+  --card: 222 47% 9%; 
   --card-foreground: 210 40% 98%;
-  --popover: 222 47% 8%;
+  --popover: 222 47% 9%;
   --popover-foreground: 210 40% 98%;
   --primary: 142 70% 45%;
   --primary-foreground: 144 70% 10%;
   --secondary: 217 32% 14%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217 32% 14%;
-  --muted-foreground: 215 20% 65%;
+  --muted-foreground: 215 20% 74%;
   --accent: 142 25% 20%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
-  --border: 217 32% 20%;
-  --input: 217 32% 20%;
+  --border: 217 28% 26%;
+ --input: 217 28% 26%;
   --ring: 142 70% 45%;
 }
 
