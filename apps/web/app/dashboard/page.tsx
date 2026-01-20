@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Copy, Link2, Loader2, Sparkles, Trash2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
@@ -137,7 +137,9 @@ function validateDestinationUrl(input: string) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const destinationRef = React.useRef<HTMLInputElement | null>(null);
   const [origin, setOrigin] = React.useState("");
   const [links, setLinks] = React.useState<LinkItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -153,6 +155,7 @@ export default function DashboardPage() {
   const [customSlug, setCustomSlug] = React.useState("");
   const [redirectType, setRedirectType] = React.useState("302");
   const [highlightedLinkId, setHighlightedLinkId] = React.useState<string | null>(null);
+  const [handoffActive, setHandoffActive] = React.useState(false);
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
@@ -162,8 +165,20 @@ export default function DashboardPage() {
     const urlParam = searchParams.get("url");
     if (urlParam) {
       setDestinationUrl(urlParam);
+      setHandoffActive(true);
+      requestAnimationFrame(() => destinationRef.current?.focus());
     }
   }, [searchParams]);
+
+  React.useEffect(() => {
+    if (!handoffActive) {
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => {
+      setHandoffActive(false);
+    }, 1500);
+    return () => window.clearTimeout(timeout);
+  }, [handoffActive]);
 
   async function loadLinks() {
     setIsLoading(true);
@@ -273,6 +288,10 @@ export default function DashboardPage() {
       }
 
       await loadLinks();
+      if (searchParams.get("url")) {
+        router.replace("/dashboard");
+      }
+      localStorage.removeItem("shrnk:pending-url");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create link.";
       setFormError(message);
@@ -394,9 +413,11 @@ export default function DashboardPage() {
                 </label>
                 <Input
                   id="destinationUrl"
+                  ref={destinationRef}
                   value={destinationUrl}
                   onChange={(event) => setDestinationUrl(event.target.value)}
                   placeholder="https://example.com/launch"
+                  className={handoffActive ? "border-primary/60 ring-primary/20 ring-2" : undefined}
                 />
                 {fieldErrors.destinationUrl ? (
                   <p className="text-destructive text-xs">{fieldErrors.destinationUrl}</p>

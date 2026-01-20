@@ -10,13 +10,67 @@ import { Input } from "../components/ui/input";
 export default function HomePage() {
   const router = useRouter();
   const [url, setUrl] = React.useState("");
+  const [urlError, setUrlError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const storageKey = "shrnk:pending-url";
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      setUrl(stored);
+    }
+  }, []);
+
+  function isValidHostname(hostname: string) {
+    if (hostname === "localhost") {
+      return true;
+    }
+    if (hostname.includes(":")) {
+      return true;
+    }
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+      return true;
+    }
+    return hostname.includes(".");
+  }
+
+  function validateDestinationUrl(input: string) {
+    if (!input) {
+      return "Destination URL is required.";
+    }
+
+    let parsed: URL;
+    try {
+      parsed = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(input) ? new URL(input) : new URL(`https://${input}`);
+    } catch {
+      return "Please enter a valid URL (e.g., example.com).";
+    }
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "Only http and https URLs are allowed.";
+    }
+
+    if (!isValidHostname(parsed.hostname.toLowerCase())) {
+      return "Please enter a valid URL (e.g., example.com).";
+    }
+
+    return null;
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = url.trim();
-    if (!trimmed) {
+    if (isSubmitting) {
       return;
     }
+    const trimmed = url.trim();
+    const validationError = validateDestinationUrl(trimmed);
+    if (validationError) {
+      setUrlError(validationError);
+      return;
+    }
+    setUrlError(null);
+    setIsSubmitting(true);
+    localStorage.removeItem(storageKey);
     router.push(`/dashboard?url=${encodeURIComponent(trimmed)}`);
   }
 
@@ -39,15 +93,25 @@ export default function HomePage() {
           >
             <Input
               value={url}
-              onChange={(event) => setUrl(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setUrl(nextValue);
+                setUrlError(null);
+                if (nextValue.trim()) {
+                  localStorage.setItem(storageKey, nextValue);
+                } else {
+                  localStorage.removeItem(storageKey);
+                }
+              }}
               placeholder="Paste a long URL..."
               className="h-12 flex-1 text-base"
               aria-label="Destination URL"
             />
-            <Button type="submit" className="h-12 px-6 text-base">
+            <Button type="submit" className="h-12 px-6 text-base" disabled={isSubmitting}>
               Shrink it!
             </Button>
           </form>
+          {urlError ? <p className="text-destructive text-sm">{urlError}</p> : null}
           <p className="text-muted-foreground text-sm">No signup required in dev mode.</p>
           <div className="flex items-center gap-3">
             <Button asChild variant="outline">
