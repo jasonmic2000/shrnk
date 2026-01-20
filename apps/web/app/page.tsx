@@ -45,7 +45,7 @@ export default function HomePage() {
               aria-label="Destination URL"
             />
             <Button type="submit" className="h-12 px-6 text-base">
-              Shrink
+              Shrink it!
             </Button>
           </form>
           <p className="text-muted-foreground text-sm">No signup required in dev mode.</p>
