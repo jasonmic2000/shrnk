@@ -1,5 +1,4 @@
 import "./globals.css";
-import Script from "next/script";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 import { SiteHeader } from "../components/site-header";
@@ -23,11 +22,10 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${sans.variable} ${mono.variable} bg-background text-foreground min-h-screen font-sans antialiased`}
-      >
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`(function () {
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function () {
   var storageKey = "theme";
   var className = "dark";
   var root = document.documentElement;
@@ -39,8 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   } else {
     root.classList.remove(className);
   }
-})();`}
-        </Script>
+})();`,
+          }}
+        />
+      </head>
+      <body
+        className={`${sans.variable} ${mono.variable} bg-background text-foreground min-h-screen font-sans antialiased`}
+      >
         <div className="relative min-h-screen bg-[radial-gradient(circle_at_top,_hsl(var(--accent)/0.35),_transparent_45%)]">
           <SiteHeader />
           <main className="mx-auto w-full max-w-6xl px-6 pb-16">{children}</main>
