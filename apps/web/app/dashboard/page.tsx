@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Link2, Loader2, Sparkles } from "lucide-react";
+import { Copy, Link2, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                   const isHighlighted = highlightedLinkId === link.id;
                   return (
                     <Card
-                      className={`border-border/80 bg-background/70 hover:border-foreground/25 rounded-2xl border transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md ${
+                      className={`border-border/80 bg-background/70 hover:border-foreground/25 relative rounded-2xl border transition-[background-color,border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-md ${
                         isHighlighted ? "ring-primary/30 ring-2" : ""
                       }`}
                       key={link.id}
@@ -459,21 +459,25 @@ export default function DashboardPage() {
                             <span className="border-border rounded-full border px-2 py-1">
                               Created {formatDate(link.createdAt)}
                             </span>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="border-destructive/40 text-destructive hover:border-destructive/60 hover:text-destructive"
-                              disabled={deletingId === link.id}
-                              onClick={() => handleDelete(link)}
-                            >
-                              {deletingId === link.id ? "Deleting..." : "Delete"}
-                            </Button>
                           </div>
                         </div>
                         <p className="text-muted-foreground truncate text-xs" title={link.destinationUrl}>
                           {link.destinationUrl}
                         </p>
+                        <button
+                          type="button"
+                          className="text-muted-foreground/70 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background absolute bottom-4 right-4 inline-flex items-center justify-center transition-[color,transform] duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                          aria-label="Delete link"
+                          title="Delete link"
+                          disabled={deletingId === link.id}
+                          onClick={() => handleDelete(link)}
+                        >
+                          {deletingId === link.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
                       </CardContent>
                     </Card>
                   );
