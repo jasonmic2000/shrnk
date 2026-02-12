@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "pnpm db:generate && next build",
+    "postbuild": "prisma migrate deploy",
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
