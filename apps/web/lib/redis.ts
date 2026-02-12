@@ -14,7 +14,7 @@ function createRedisClient() {
 export const redis = globalForRedis.redis ?? createRedisClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForRedis.redis = redis;
+  globalForRedis.redis = redis as RedisClientType;
 }
 
 export async function ensureRedisConnection() {
