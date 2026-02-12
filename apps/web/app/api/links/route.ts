@@ -268,7 +268,7 @@ export async function GET(request: Request) {
     try {
       const redis = await ensureRedisConnection();
       const clickKeys = links.map((link: any) => `clicks:${link.id}`);
-      const lastClickedKeys = links.map((link) => `lastClickedAt:${link.id}`);
+      const lastClickedKeys = links.map((link: any) => `lastClickedAt:${link.id}`);
       const [clickValues, lastClickedValues] = await Promise.all([redis.mGet(clickKeys), redis.mGet(lastClickedKeys)]);
 
       links.forEach((link, index) => {
@@ -294,7 +294,7 @@ export async function GET(request: Request) {
   type LinkWithAnalytics = Awaited<ReturnType<typeof prisma.link.findMany>>[number];
   const typedLinks = links as LinkWithAnalytics[];
   const hasNextPage = typedLinks.length > limit;
-  const items = typedLinks.slice(0, limit).map((link) => ({
+  const items = typedLinks.slice(0, limit).map((link: any) => ({
     id: link.id,
     slug: link.slug,
     destinationUrl: link.destinationUrl,
