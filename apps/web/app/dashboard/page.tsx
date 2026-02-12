@@ -136,7 +136,7 @@ function validateDestinationUrl(input: string) {
   return null;
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const destinationRef = React.useRef<HTMLInputElement | null>(null);
@@ -776,5 +776,13 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <React.Suspense fallback={<div className="text-muted-foreground">Loading dashboard...</div>}>
+      <DashboardContent />
+    </React.Suspense>
   );
 }
