@@ -271,7 +271,7 @@ export async function GET(request: Request) {
       const lastClickedKeys = links.map((link: any) => `lastClickedAt:${link.id}`);
       const [clickValues, lastClickedValues] = await Promise.all([redis.mGet(clickKeys), redis.mGet(lastClickedKeys)]);
 
-      links.forEach((link, index) => {
+      links.forEach((link: any, index) => {
         const clickValue = clickValues[index];
         const lastClickedValue = lastClickedValues[index];
         const parsedClicks = clickValue ? Number.parseInt(clickValue, 10) : null;
