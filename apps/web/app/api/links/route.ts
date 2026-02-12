@@ -267,7 +267,7 @@ export async function GET(request: Request) {
   if (links.length > 0) {
     try {
       const redis = await ensureRedisConnection();
-      const clickKeys = links.map((link) => `clicks:${link.id}`);
+      const clickKeys = links.map((link: any) => `clicks:${link.id}`);
       const lastClickedKeys = links.map((link) => `lastClickedAt:${link.id}`);
       const [clickValues, lastClickedValues] = await Promise.all([redis.mGet(clickKeys), redis.mGet(lastClickedKeys)]);
 
@@ -311,12 +311,14 @@ export async function GET(request: Request) {
           lastClickedAt: liveAnalytics.lastClickedAt,
         };
       }
-      if (!link.analytics) {
+      if (!(link as any).analytics) {
         return null;
       }
       return {
-        totalClicks: Number(link.analytics.totalClicks),
-        lastClickedAt: link.analytics.lastClickedAt ? link.analytics.lastClickedAt.toISOString() : null,
+        totalClicks: Number((link as any).analytics.totalClicks),
+        lastClickedAt: (link as any).analytics.lastClickedAt
+          ? (link as any).analytics.lastClickedAt.toISOString()
+          : null,
       };
     })(),
   }));
